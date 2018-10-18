@@ -57,6 +57,9 @@ exports.postOnNewIssue = functions.crashlytics.issue().onNew((issue) => {
   var appPlatform = issue.appInfo ? issue.appInfo.appPlatform : "";
   var latestAppVersion = issue.appInfo ? issue.appInfo.latestAppVersion : "";
 
+  console.log(`appPlatform ${appPlatform}`);
+  if (appPlatform !== "ios") { return 0; }
+
   // Prepare the issue text.
   var title = `${functions.config().issue.title} - ${issueTitle} (${issueId})` ;
   var message = `${functions.config().issue.body}
