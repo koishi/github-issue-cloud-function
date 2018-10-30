@@ -19,12 +19,12 @@ const functions = require('firebase-functions');
 const rp = require('request-promise');
 
 // Helper function that posts to Slack about the new issue
-const createIssue = (issueTitle, issueMessage) => {
+const createIssue = (issueTitle, issueMessage, repoName) => {
   // See https://developer.github.com/v3/issues/#create-an-issue on how
   // to customize the message payload
   var issueReq = rp({
     method: 'POST',
-    uri: functions.config().github.base_url + '/repos/' + functions.config().repo.owner + '/' +  functions.config().repo.repo_name + '/issues',
+    uri: functions.config().github.base_url + '/repos/' + functions.config().repo.owner + '/' +  repoName + '/issues',
 	qs: {
         access_token: functions.config().github.token	// -> uri + '?access_token=xxxxx%20xxxxx'
     },
@@ -48,7 +48,7 @@ const createIssue = (issueTitle, issueMessage) => {
 };
 
 exports.postOnNewIssue = functions.crashlytics.issue().onNew((issue) => {
-	
+
   var issueId = issue.issueId;
   var issueTitle = issue.issueTitle;
  
@@ -57,20 +57,24 @@ exports.postOnNewIssue = functions.crashlytics.issue().onNew((issue) => {
   var appPlatform = issue.appInfo ? issue.appInfo.appPlatform : "";
   var latestAppVersion = issue.appInfo ? issue.appInfo.latestAppVersion : "";
 
+  var repoName = "";
+  if (appPlatform == "ios") {
+    repoName = functions.config().repo.ios_repo_name;
+  } else {
+    repoName = functions.config().repo.android_repo_name;
+  }
   console.log(`appPlatform ${appPlatform}`);
-  if (appPlatform !== "ios") { return 0; }
+  console.log(`repoName ${repoName}`);
 
   // Prepare the issue text.
   var title = `${functions.config().issue.title} - ${issueTitle} (${issueId})` ;
-  var message = `${functions.config().issue.body}
-  
-  Crash report : [Firebase Console Link](https://console.firebase.google.com/u/0/project/${process.env.GCLOUD_PROJECT}/crashlytics/app/${appPlatform}:${appId}/issues/${issueId})
+  var message = `Crash report : [Firebase Console Link](https://console.firebase.google.com/u/0/project/${process.env.GCLOUD_PROJECT}/crashlytics/app/${appPlatform}:${appId}/issues/${issueId})
   
   ### Application Info:\n
   **Application name**: ${appName}(${appId}) 
   **Version**: ${latestAppVersion} on ${appPlatform}`;
   
-  return createIssue(title, message).then(() => {
+  return createIssue(title, message, repoName).then(() => {
     return console.log(`Posted new issue ${issueId} successfully to GitHub`);
   });
 });
